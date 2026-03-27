@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>การคำนวณสารอาหาร - โรงเรียนเบาหวาน</title>
+    <title>การคำนวณสารอาหารโรงเรียนเบาหวาน</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -160,7 +160,7 @@
         </div>
     </div>
 
-<!-- HISTORY MODAL -->
+    <!-- HISTORY MODAL -->
     <div id="historyModal" class="modal fixed inset-0 flex items-center justify-center hidden">
         <div class="bg-white p-6 rounded-3xl w-full max-w-xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl m-4">
             <div class="flex justify-between items-center mb-4">
@@ -172,9 +172,6 @@
                 </button>
             </div>
 
-
-
-
             <div class="relative mb-4">
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -184,13 +181,7 @@
                 <input id="historySearchInput" oninput="filterHistory()" placeholder="ค้นหาด้วยชื่อ..." class="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl big-input">
             </div>
 
-
-
-
             <div id="historyList" class="flex-grow overflow-y-auto pr-2 no-scrollbar"></div>
-
-
-
 
             <div class="flex gap-3 mt-6">
                 <button onclick="clearHistory()" class="flex-grow bg-red-50 text-red-600 py-3 rounded-xl font-medium hover:bg-red-100">ลบประวัติทั้งหมด</button>
@@ -240,15 +231,18 @@
                 return;
             }
 
-            const bmi = weight / ((height / 100) ** 2);
+            // --- สูตรคำนวณตามที่กำหนด ---
 
+            // 1. คำนวณ BMI
+            const bmi = weight / ((height/100)**2);
             let bmiStatus = '';
-            if (bmi <= 18.5) bmiStatus = 'น้ำหนักต่ำกว่าเกณฑ์';
-            else if (bmi <= 22.9) bmiStatus = 'สมส่วน';
-            else if (bmi <= 24.9) bmiStatus = 'น้ำหนักเกิน';
-            else if (bmi <= 29.9) bmiStatus = 'โรคอ้วน';
-            else bmiStatus = 'โรคอ้วนรุนแรง';
+            if (bmi <= 18.5) bmiStatus = 'น้ำหนักต่ำกว่าเกณฑ์ 😵';
+            else if (bmi <= 22.9) bmiStatus = 'สมส่วน 🤩';
+            else if (bmi <= 24.9) bmiStatus = 'น้ำหนักเกิน 😣';
+            else if (bmi <= 29.9) bmiStatus = 'โรคอ้วน 😖';
+            else bmiStatus = 'โรคอ้วนอันตราย 😭';
 
+            // 2. คำนวณ BMR
             let bmr;
             if (gender === 'male') {
                 bmr = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
@@ -256,14 +250,34 @@
                 bmr = 665 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
             }
 
+            // 3. คำนวณ TDEE
             const tdee = bmr * activity;
-            const proteinCal = weight * 1.5 * 4;
-            const carbCal = tdee * (carbChoice / 100);
-            const fatCal = tdee - (proteinCal + carbCal);
 
+            // 4. กำหนด proteinFactor ตามกิจกรรม
+            let proteinFactor;
+            const activityVal = parseFloat(activity);
+            if (activityVal === 1.2) proteinFactor = 1;
+            else if (activityVal === 1.375) proteinFactor = 1.2;
+            else if (activityVal === 1.55) proteinFactor = 1.5;
+            else if (activityVal === 1.725) proteinFactor = 1.5;
+            else if (activityVal === 1.9) proteinFactor = 2;
+            else proteinFactor = 1; // default
+
+            // 5. คำนวณแคลอรี่และกรัมจากสารอาหาร
+            const proteinCal = weight * proteinFactor * 4;
+            const proteinPercent = (proteinCal * 100 / tdee).toFixed(1);
             const proteinGram = (proteinCal / 4).toFixed(1);
+
+            const carbCal = tdee * (carbChoice / 100);
+            const carbPercent = (carbCal * 100 / tdee).toFixed(1);
             const carbGram = (carbCal / 4).toFixed(1);
+
+            const fatCal = tdee - (proteinCal + carbCal);
+            const fatPercent = (fatCal * 100 / tdee).toFixed(1);
             const fatGram = (fatCal / 9).toFixed(1);
+
+            // 6. คำนวณหน่วยคาร์บ
+            const carbUnits = (carbGram / 15).toFixed(1);
 
             const record = {
                 name,
@@ -275,6 +289,10 @@
                 proteinGram,
                 carbGram,
                 fatGram,
+                proteinPercent,
+                carbPercent,
+                fatPercent,
+                carbUnits,
                 date: new Date().toLocaleString('th-TH')
             };
 
@@ -296,19 +314,12 @@
             formContainer.classList.add('hidden');
             resultContainer.classList.remove('hidden');
 
-            const totalCal = proteinCal + carbCal + fatCal;
-            const carbPercent = ((carbCal / totalCal) * 100).toFixed(1);
-            const proteinPercent = ((proteinCal / totalCal) * 100).toFixed(1);
-            const fatPercent = ((fatCal / totalCal) * 100).toFixed(1);
-
-            const carbExchange = (record.carbGram / 15).toFixed(1);
-
-            let emoji = '🙂';
             let colorClass = 'text-emerald-600';
-            if (record.bmi < 18.5) { emoji = '😟'; colorClass = 'text-yellow-600'; }
-            else if (record.bmi < 23) { emoji = '😊'; colorClass = 'text-emerald-600'; }
-            else if (record.bmi < 25) { emoji = '😐'; colorClass = 'text-orange-600'; }
-            else { emoji = '⚠️'; colorClass = 'text-red-600'; }
+            const bmiVal = record.bmi;
+            if (bmiVal <= 18.5) colorClass = 'text-yellow-600';
+            else if (bmiVal <= 22.9) colorClass = 'text-emerald-600';
+            else if (bmiVal <= 24.9) colorClass = 'text-orange-600';
+            else colorClass = 'text-red-600';
 
             result.innerHTML = `
                 <div class="flex justify-between items-start">
@@ -332,7 +343,6 @@
                     </div>
                 </div>
                 <div class="mt-4 flex items-center gap-2">
-                    <span class="text-2xl">${emoji}</span>
                     <p class="font-medium text-gray-700">สถานะร่างกาย: <span class="font-bold ${colorClass}">${record.bmiStatus}</span></p>
                 </div>
             `;
@@ -348,22 +358,22 @@
                     <div class="bg-red-50 p-2 rounded-xl">
                         <p class="text-[10px] font-bold text-red-600 uppercase">โปรตีน</p>
                         <p class="text-sm font-bold">${record.proteinGram}g</p>
-                        <p class="text-[10px] text-red-500 font-medium">${proteinPercent}%</p>
+                        <p class="text-[10px] text-red-500 font-medium">${record.proteinPercent}%</p>
                     </div>
                     <div class="bg-blue-50 p-2 rounded-xl">
                         <p class="text-[10px] font-bold text-blue-600 uppercase">คาร์บ</p>
                         <p class="text-sm font-bold">${record.carbGram}g</p>
-                        <p class="text-[10px] text-blue-500 font-medium">${carbPercent}%</p>
+                        <p class="text-[10px] text-blue-500 font-medium">${record.carbPercent}%</p>
                     </div>
                     <div class="bg-yellow-50 p-2 rounded-xl">
                         <p class="text-[10px] font-bold text-yellow-600 uppercase">ไขมัน</p>
                         <p class="text-sm font-bold">${record.fatGram}g</p>
-                        <p class="text-[10px] text-yellow-500 font-medium">${fatPercent}%</p>
+                        <p class="text-[10px] text-yellow-500 font-medium">${record.fatPercent}%</p>
                     </div>
                 </div>
                 <div class="bg-emerald-600 text-white p-3 rounded-xl">
                     <p class="text-xs opacity-90">ปริมาณคาร์บที่แนะนำต่อวัน</p>
-                    <p class="text-2xl font-bold">${carbExchange} คาร์บ</p>
+                    <p class="text-2xl font-bold">${record.carbUnits} คาร์บ</p>
                     <p class="text-[10px] opacity-80 mt-1">(1 คาร์บ ≈ ข้าว 1 ทัพพี หรือ 15 กรัม)</p>
                 </div>
             `;
@@ -393,9 +403,10 @@
                         legend: { position: 'bottom', labels: { font: { family: 'Kanit', size: 12 }, padding: 20 } },
                         datalabels: {
                             color: '#fff',
-                            font: { weight: 'bold', family: 'Kanit', size: 12 },
+                            font: { weight: 'bold', family: 'Kanit', size: 30 },
                             formatter: (value, ctx) => {
                                 const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                if (total === 0) return '0%';
                                 const pct = (value / total * 100).toFixed(0) + '%';
                                 return pct;
                             }
@@ -423,7 +434,6 @@
         }
 
         function showHistory() {
-            const historyList = document.getElementById('historyList');
             const history = JSON.parse(localStorage.getItem('nutritionHistory') || '[]');
             allHistoryRecords = history;
             renderHistoryList(history);
@@ -488,10 +498,10 @@
                 text = '<p class="text-center py-4">⚠️ กรุณากรอกข้อมูลและกดปุ่มคำนวณก่อนรับคำแนะนำ</p>';
             } else {
                 const bmi = lastCalculatedRecord.bmi;
-                if (bmi < 18.5) {
+                if (bmi <= 18.5) {
                     text = `
                         <div class="bg-yellow-50 p-4 rounded-xl mb-4 border-l-4 border-yellow-400">
-                            <strong>สถานะ: น้ำหนักต่ำกว่าเกณฑ์</strong>
+                            <strong>สถานะ: ${lastCalculatedRecord.bmiStatus}</strong>
                         </div>
                         <p>ควรเพิ่มพลังงานจากอาหารที่มีคุณค่าทางโภชนาการสูง:</p>
                         <ul class="list-disc ml-5 space-y-2 mt-3">
@@ -499,10 +509,10 @@
                             <li>เพิ่มมื้อย่อยระหว่างวันเป็น 4-5 มื้อ</li>
                             <li>เลือกไขมันดีจาก อะโวคาโด และถั่วเปลือกแข็ง</li>
                         </ul>`;
-                } else if (bmi < 23) {
+                } else if (bmi <= 22.9) {
                     text = `
                         <div class="bg-emerald-50 p-4 rounded-xl mb-4 border-l-4 border-emerald-400">
-                            <strong>สถานะ: น้ำหนักสมส่วน (สุขภาพดี)</strong>
+                            <strong>สถานะ: ${lastCalculatedRecord.bmiStatus}</strong>
                         </div>
                         <p>ควรรักษาสมดุลโภชนาการนี้ไว้ต่อเนื่อง:</p>
                         <ul class="list-disc ml-5 space-y-2 mt-3">
@@ -513,7 +523,7 @@
                 } else {
                     text = `
                         <div class="bg-red-50 p-4 rounded-xl mb-4 border-l-4 border-red-400">
-                            <strong>สถานะ: เริ่มมีภาวะน้ำหนักเกิน/โรคอ้วน</strong>
+                            <strong>สถานะ: ${lastCalculatedRecord.bmiStatus}</strong>
                         </div>
                         <p>ควรปรับเปลี่ยนพฤติกรรมเพื่อสุขภาพที่ดีในระยะยาว:</p>
                         <ul class="list-disc ml-5 space-y-2 mt-3">
@@ -532,7 +542,15 @@
             const history = JSON.parse(localStorage.getItem('nutritionHistory') || '[]');
             const rec = history[index];
             if (!rec) return;
-            showResult(rec, parseFloat(rec.proteinGram)*4, parseFloat(rec.carbGram)*4, parseFloat(rec.fatGram)*9);
+            lastCalculatedRecord = rec;
+            
+            // ย้อนกลับไปคำนวณแคลอรี่เพื่อวาดกราฟใหม่
+            const tdeeVal = parseFloat(rec.tdee);
+            const proteinCal = parseFloat(rec.proteinGram) * 4;
+            const carbCal = parseFloat(rec.carbGram) * 4;
+            const fatCal = parseFloat(rec.fatGram) * 9;
+
+            showResult(rec, proteinCal, carbCal, fatCal);
             closeModal('historyModal');
         }
 
